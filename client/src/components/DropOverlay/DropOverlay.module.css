@@ -1,0 +1,30 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(124, 106, 247, 0.15);
+  border: 3px dashed var(--accent);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.icon {
+  font-size: 60px;
+  opacity: 0.7;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+
+.text {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent2);
+}
