@@ -1,0 +1,319 @@
+.dateSeparator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 0;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dateSeparator::before,
+.dateSeparator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── Row ─────────────────────────────────────────── */
+.row {
+  display: flex;
+  flex-direction: column;
+  max-width: 68%;
+  gap: 3px;
+  animation: msgIn 0.25s ease both;
+  position: relative;
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.row.sent { align-self: flex-end; align-items: flex-end; }
+.row.recv { align-self: flex-start; align-items: flex-start; }
+
+/* ─── Hover actions ────────────────────────────────── */
+.actions {
+  position: absolute;
+  top: -10px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.row.sent .actions { right: 0; }
+.row.recv .actions { left: 0; }
+.row:hover .actions { display: flex; }
+
+.actionBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.actionBtn:hover {
+  background: var(--surface3);
+  color: var(--text);
+}
+
+/* ─── Reaction Picker ──────────────────────────────── */
+.reactionPicker {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: flex;
+  gap: 6px;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  animation: pickerIn 0.15s ease;
+  white-space: nowrap;
+}
+
+.row.sent .reactionPicker { right: 0; }
+.row.recv .reactionPicker { left: 0; }
+
+@keyframes pickerIn {
+  from { opacity: 0; transform: scale(0.8) translateY(4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.reactionOption {
+  font-size: 20px;
+  cursor: pointer;
+  transition: transform 0.15s;
+  padding: 2px;
+  line-height: 1;
+}
+
+.reactionOption:hover { transform: scale(1.4); }
+
+/* ─── Reply preview ────────────────────────────────── */
+.replyPreview {
+  padding: 8px 12px;
+  background: var(--surface3);
+  border-radius: 10px;
+  border-left: 3px solid var(--accent);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.replyPreview:hover { background: var(--border); }
+
+.replySender {
+  font-weight: 700;
+  color: var(--accent2);
+  font-size: 11px;
+  margin-bottom: 2px;
+  font-family: var(--mono);
+}
+
+.replyText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Meta ─────────────────────────────────────────── */
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+
+.sender {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.time {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.row:hover .time { opacity: 1; }
+
+.tick {
+  font-size: 11px;
+  color: var(--accent2);
+  margin-left: 4px;
+  opacity: 0.8;
+}
+
+/* ─── Bubble ───────────────────────────────────────── */
+.bubble {
+  padding: 11px 16px;
+  border-radius: var(--radius);
+  font-size: 14.5px;
+  line-height: 1.55;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
+  position: relative;
+  transition: background 0.25s;
+}
+
+.sent .bubble {
+  background: var(--sent-bg);
+  border: 1.5px solid var(--sent-border);
+  border-bottom-right-radius: 5px;
+  color: var(--text);
+}
+
+.recv .bubble {
+  background: var(--recv-bg);
+  border: 1.5px solid var(--recv-border);
+  border-bottom-left-radius: 5px;
+  color: var(--text);
+}
+
+.hasImage { padding: 6px; }
+
+.bubbleImage {
+  max-width: 280px;
+  max-height: 220px;
+  border-radius: 12px;
+  display: block;
+  cursor: pointer;
+  object-fit: cover;
+  transition: transform 0.2s;
+}
+
+.bubbleImage:hover { transform: scale(1.02); }
+
+.imageCaption {
+  padding: 6px 10px 4px;
+  font-size: 14px;
+}
+
+.fileAttachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface3);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.fileAttachment:hover { background: var(--border); }
+
+.fileIcon { font-size: 24px; flex-shrink: 0; }
+
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fileName {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileSize {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ─── Reactions bar ────────────────────────────────── */
+.reactionsBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.reactionChip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 9px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+  user-select: none;
+  animation: chipIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes chipIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.reactionChip:hover { background: var(--surface2); transform: scale(1.1); }
+.reactionChip.mine { background: rgba(124, 106, 247, 0.2); border-color: var(--accent); }
+
+.reactionCount {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+@media (max-width: 500px) {
+  .row { max-width: 85%; }
+}
+
+/* ─── System message ──────────────────────────────── */
+.systemMsg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.systemDot {
+  display: inline-block;
+  width: 16px;
+  height: 1px;
+  background: var(--border);
+}

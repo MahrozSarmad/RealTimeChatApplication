@@ -1,0 +1,81 @@
+/* ─── Design tokens ─────────────────────────────────── */
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1c1c27;
+  --surface3: #252535;
+  --border: #2a2a3d;
+  --accent: #7c6af7;
+  --accent2: #a78bfa;
+  --accent-glow: rgba(124, 106, 247, 0.25);
+  --text: #e8e8f0;
+  --text-muted: #6b6b8a;
+  --text-dim: #9090b0;
+  --green: #4ade80;
+  --red: #f87171;
+  --sent-bg: #1e1a40;
+  --sent-border: #4a3fa0;
+  --recv-bg: #1a1a26;
+  --recv-border: #2a2a3d;
+  --radius: 18px;
+  --radius-sm: 10px;
+  --font: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+/* ─── Light mode overrides ───────────────────────────── */
+.light-mode {
+  --bg: #f4f4fb;
+  --surface: #ffffff;
+  --surface2: #eeeef8;
+  --surface3: #e4e4f4;
+  --border: #c8c8e8;
+  --text: #0f0f24;
+  --text-muted: #6060a0;
+  --text-dim: #4444aa;
+  --sent-bg: #e8e4ff;
+  --sent-border: #9d8eff;
+  --recv-bg: #f8f8ff;
+  --recv-border: #d0d0f0;
+  --accent: #5b3ef8;
+  --accent2: #7c5af5;
+  --accent-glow: rgba(91, 62, 248, 0.18);
+}
+
+/* ─── Reset ──────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+  transition: background 0.25s, color 0.25s;
+}
+
+#root {
+  height: 100%;
+}
+
+/* ─── Noise texture overlay ──────────────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+button {
+  font-family: var(--font);
+}
