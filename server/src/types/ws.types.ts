@@ -83,12 +83,22 @@ export interface PingPayload {
   type: 'ping';
 }
 
+export interface LeaveGroupPayload {
+  type: 'leave_group';
+}
+
+export interface ExitChatPayload {
+  type: 'exit_chat';
+}
+
 export type IncomingPayload =
   | JoinPayload
   | MessagePayload
   | ReactionPayload
   | TypingPayload
-  | PingPayload;
+  | PingPayload
+  | LeaveGroupPayload
+  | ExitChatPayload;
 
 // ─── Outgoing Server Events ───────────────────────────
 export interface ConnectedEvent {

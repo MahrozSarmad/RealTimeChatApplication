@@ -4,6 +4,15 @@ export interface UserInfo {
   name: string;
 }
 
+// ─── Joined group record (stored locally) ─────────────
+export interface JoinedGroup {
+  room: string;
+  roomType: 'public' | 'private';
+  password?: string;
+  lastJoined: number;
+  isAdmin?: boolean;
+}
+
 // ─── Reply reference ──────────────────────────────────
 export interface ReplyReference {
   id: string;
@@ -14,30 +23,22 @@ export interface ReplyReference {
 // ─── Reaction map: emoji -> userId[] ─────────────────
 export type ReactionMap = Record<string, string[]>;
 
-export interface SystemMessage {
-  type: 'system';
+// ─── Chat Message ─────────────────────────────────────
+export interface ChatMessage {
+  type: 'message';
   id: string;
+  senderId: string;
+  senderName: string;
   text: string;
   timestamp: number;
+  replyTo?: ReplyReference;
+  mediaType?: 'image' | 'file';
+  mediaData?: string;
+  fileName?: string;
+  fileSize?: number;
+  reactions?: ReactionMap;
+  own?: boolean;
 }
-
-export type ChatMessage =
-  | {
-      type: 'message';
-      id: string;
-      senderId: string;
-      senderName: string;
-      text: string;
-      timestamp: number;
-      replyTo?: ReplyReference;
-      mediaType?: 'image' | 'file';
-      mediaData?: string;
-      fileName?: string;
-      fileSize?: number;
-      reactions?: ReactionMap;
-      own?: boolean;
-    }
-  | SystemMessage;
 
 // ─── Outgoing payloads to server ─────────────────────
 export interface JoinPayload {
@@ -68,6 +69,10 @@ export interface ReactionPayload {
 export interface TypingPayload {
   type: 'typing';
   isTyping: boolean;
+}
+
+export interface LeaveGroupPayload {
+  type: 'leave_group';
 }
 
 // ─── Incoming server events ───────────────────────────

@@ -37,6 +37,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   const time = formatTime(message.timestamp);
 
+  // System message (user left notification)
+  if (message.senderId === '__system__') {
+    return (
+      <div className={styles.systemMsg} role="status">
+        <span className={styles.systemDot} />
+        {message.text}
+        <span className={styles.systemDot} />
+      </div>
+    );
+  }
+
   // Date separator
   const dateLabel = buildDateLabel(message.timestamp);
   const prevDateLabel = prevTimestamp ? buildDateLabel(prevTimestamp) : null;
@@ -47,14 +58,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     const action: 'add' | 'remove' = myId && users.includes(myId) ? 'remove' : 'add';
     onReact(message.id, emoji, action);
   };
-
-  if (message.type === 'system') {
-    return (
-      <div className={styles.system} ref={msgRef}>
-        {message.text}
-      </div>
-    );
-  }
 
   return (
     <>

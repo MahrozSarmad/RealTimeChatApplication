@@ -25,19 +25,21 @@
 
 /* ─── Light mode overrides ───────────────────────────── */
 .light-mode {
-  --bg: #f0f0f8;
+  --bg: #f4f4fb;
   --surface: #ffffff;
-  --surface2: #f5f5fc;
-  --surface3: #ebebf6;
-  --border: #d8d8ee;
-  --text: #14142a;
-  --text-muted: #8080a8;
-  --text-dim: #6060a0;
-  --sent-bg: #ede9ff;
-  --sent-border: #c4b8ff;
+  --surface2: #eeeef8;
+  --surface3: #e4e4f4;
+  --border: #c8c8e8;
+  --text: #0f0f24;
+  --text-muted: #6060a0;
+  --text-dim: #4444aa;
+  --sent-bg: #e8e4ff;
+  --sent-border: #9d8eff;
   --recv-bg: #f8f8ff;
-  --recv-border: #d8d8ee;
-  --accent-glow: rgba(124, 106, 247, 0.15);
+  --recv-border: #d0d0f0;
+  --accent: #5b3ef8;
+  --accent2: #7c5af5;
+  --accent-glow: rgba(91, 62, 248, 0.18);
 }
 
 /* ─── Reset ──────────────────────────────────────────── */

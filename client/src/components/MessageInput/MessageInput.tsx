@@ -12,7 +12,6 @@ interface MessageInputProps {
   onStopTyping: () => void;
   onCancelReply: () => void;
   onShowToast: (text: string) => void;
-  onOpenSchedule: (text: string) => void;
 }
 
 /**
@@ -27,7 +26,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   onStopTyping,
   onCancelReply,
   onShowToast,
-  onOpenSchedule,
 }) => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -117,14 +115,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
             onChange={onTyping}
           />
           <div className={styles.inputActions}>
-            <button
-              className={styles.attachBtn}
-              onClick={() => onOpenSchedule(inputRef.current?.value || '')}
-              title="Schedule message"
-              aria-label="Schedule message"
-            >
-              🕒
-            </button>
             <button
               className={styles.attachBtn}
               onClick={() => imageInputRef.current?.click()}

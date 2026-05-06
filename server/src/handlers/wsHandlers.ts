@@ -87,10 +87,12 @@ export async function handleJoin(ws: WebSocket, payload: JoinPayload): Promise<v
     history = roomObj.messages.slice(-100);
   }
 
-  // Attach reactions
+  // Attach reactions and mark sender's own messages
+  const clientId = getClientState(ws)?.id;
   const enrichedHistory = history.map((m) => ({
     ...m,
     reactions: roomObj.reactions[m.id] ?? {},
+    ...(m.senderId === clientId ? { own: true } : {}),
   }));
 
   sendToClient(ws, {
@@ -212,6 +214,40 @@ export function handleTyping(ws: WebSocket, payload: TypingPayload): void {
   );
 }
 
+// ─── Handler: leave_group ─────────────────────────────
+export function handleLeaveGroup(ws: WebSocket): void {
+  const client = getClientState(ws);
+  if (!client?.room || !client.name) return;
+
+  const room = getRoom(client.room);
+  if (room) {
+    room.clients.delete(ws);
+    broadcastToRoom(client.room, {
+      type: 'user_left',
+      id: client.id,
+      name: client.name,
+      users: getRoomUserList(client.room),
+      timestamp: Date.now(),
+    });
+  }
+  setClientState(ws, { room: null });
+}
+
+// ─── Handler: exit_chat (silent disconnect) ───────────
+// Called when user navigates back to dashboard without leaving the group.
+// Removes them from the room without broadcasting a "user_left" system message.
+export function handleExitChat(ws: WebSocket): void {
+  const client = getClientState(ws);
+  if (!client?.room) return;
+
+  const room = getRoom(client.room);
+  if (room) {
+    room.clients.delete(ws);
+  }
+  // Clear room from client state so onclose doesn't fire user_left again
+  setClientState(ws, { room: null });
+}
+
 // ─── Handler: ping ────────────────────────────────────
 export function handlePing(ws: WebSocket): void {
   sendToClient(ws, { type: 'pong' });
@@ -229,6 +265,12 @@ export async function dispatchMessage(ws: WebSocket, raw: Buffer | string): Prom
   switch (payload.type) {
     case 'join':
       await handleJoin(ws, payload as JoinPayload);
+      break;
+    case 'leave_group':
+      handleLeaveGroup(ws);
+      break;
+    case 'exit_chat':
+      handleExitChat(ws);
       break;
     case 'message':
       await handleMessage(ws, payload as MessagePayload);

@@ -170,3 +170,232 @@
 @media (max-width: 500px) {
   .header { padding: 10px 14px; }
 }
+
+/* ─── Back button ─────────────────────────────────── */
+.backBtn {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  flex-shrink: 0;
+}
+.backBtn:hover { background: var(--surface3); color: var(--text); transform: translateX(-2px); }
+
+/* ─── More menu ───────────────────────────────────── */
+.menuWrap {
+  position: relative;
+}
+
+.menuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  min-width: 190px;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  animation: menuPop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes menuPop {
+  from { opacity: 0; transform: scale(0.9) translateY(-6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+.menuItem:hover { background: var(--surface2); }
+.menuItem.danger { color: var(--red); }
+.menuItem.danger:hover { background: rgba(248, 113, 113, 0.1); }
+
+.menuDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}
+
+/* ─── Leave confirm modal ────────────────────────── */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 28px;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  text-align: center;
+  animation: modalPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modalIcon { font-size: 40px; }
+.modalTitle { font-size: 18px; font-weight: 800; color: var(--text); }
+.modalBody { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.modalBody strong { color: var(--text); }
+
+.modalActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.cancelBtn {
+  flex: 1;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cancelBtn:hover { background: var(--surface3); }
+
+.leaveBtn {
+  flex: 1;
+  padding: 12px;
+  background: var(--red);
+  border: none;
+  border-radius: 10px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 16px rgba(248, 113, 113, 0.3);
+}
+.leaveBtn:hover { opacity: 0.85; }
+
+/* ─── Admin badge ───────────────────────────────── */
+.adminBadge {
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+  letter-spacing: 0.04em;
+}
+
+/* ─── Room info modal additions ─────────────────── */
+.infoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.infoRow:last-of-type { border-bottom: none; }
+
+.infoLabel {
+  font-size: 11px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.infoValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.passwordReveal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revealBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 2px;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.revealBtn:hover { opacity: 1; }
+
+.adminNote {
+  margin-top: 12px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  text-align: center;
+  padding: 8px;
+  background: rgba(245, 158, 11, 0.06);
+  border-radius: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}

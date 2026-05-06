@@ -1,8 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ServerEvent, ChatMessage, UserInfo, ReactionMap, ReplyReference } from '../types/chat.types';
+import { ServerEvent, ChatMessage, UserInfo, ReactionMap, ReplyReference, JoinedGroup } from '../types/chat.types';
 import { getWsUrl } from '../utils/helpers';
 
-// ─── Chat state shape ──────────────────────────────────
+const GROUPS_KEY = 'pulse_joined_groups';
+const USERNAME_KEY = 'pulse_username';
+const PROFILE_KEY = 'pulse_user_profile';
+
+export interface UserProfile {
+  name: string;
+  avatar: string; // emoji or initial
+  bio: string;
+  createdAt: number;
+}
+
+function loadJoinedGroups(): JoinedGroup[] {
+  try { return JSON.parse(localStorage.getItem(GROUPS_KEY) ?? '[]'); }
+  catch { return []; }
+}
+function saveJoinedGroups(groups: JoinedGroup[]) {
+  localStorage.setItem(GROUPS_KEY, JSON.stringify(groups));
+}
+function upsertGroup(groups: JoinedGroup[], group: JoinedGroup): JoinedGroup[] {
+  return [group, ...groups.filter(g => g.room !== group.room)].slice(0, 20);
+}
+function removeGroup(groups: JoinedGroup[], room: string): JoinedGroup[] {
+  return groups.filter(g => g.room !== room);
+}
+
 export interface ChatState {
   myId: string | null;
   myName: string | null;
@@ -11,48 +35,83 @@ export interface ChatState {
   users: UserInfo[];
   messages: ChatMessage[];
   reactions: Record<string, ReactionMap>;
-  typingUsers: Record<string, string>;   // id -> name
+  typingUsers: Record<string, string>;
   joinError: string | null;
   isJoined: boolean;
+  isAdmin: boolean;
+  screen: 'profile' | 'join' | 'dashboard' | 'chat';
+  joinedGroups: JoinedGroup[];
+  savedUsername: string | null;
+  userProfile: UserProfile | null;
+  systemNotification: string | null;
 }
 
 export interface UseChatReturn extends ChatState {
-  join: (name: string, room: string, roomType: 'public' | 'private', password?: string) => void;
+  join: (room: string, roomType: 'public' | 'private', password?: string, isCreating?: boolean) => void;
   sendText: (text: string, replyTo?: ReplyReference) => void;
   sendMedia: (mediaType: 'image' | 'file', dataUrl: string, fileName: string, fileSize: number, replyTo?: ReplyReference) => void;
   sendReaction: (messageId: string, emoji: string, action: 'add' | 'remove') => void;
   sendTyping: (isTyping: boolean) => void;
   messageRefs: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   clearJoinError: () => void;
+  leaveGroup: () => void;
+  exitChat: () => void;
+  rejoinGroup: (group: JoinedGroup) => void;
+  goToJoin: () => void;
+  saveProfile: (profile: UserProfile) => void;
 }
 
-const INITIAL_STATE: ChatState = {
-  myId: null,
-  myName: null,
-  myRoom: null,
-  connected: false,
-  users: [],
-  messages: [],
-  reactions: {},
-  typingUsers: {},
-  joinError: null,
-  isJoined: false,
+function loadProfile(): UserProfile | null {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY) ?? 'null'); }
+  catch { return null; }
+}
+function saveProfileToStorage(profile: UserProfile) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+  localStorage.setItem(USERNAME_KEY, profile.name);
+}
+
+const getInitialState = (): ChatState => {
+  const groups = loadJoinedGroups();
+  const profile = loadProfile();
+  const screen = !profile ? 'profile' : groups.length > 0 ? 'dashboard' : 'join';
+  return {
+    myId: null,
+    myName: profile?.name ?? null,
+    myRoom: null,
+    connected: false,
+    users: [],
+    messages: [],
+    reactions: {},
+    typingUsers: {},
+    joinError: null,
+    isJoined: false,
+    isAdmin: false,
+    screen,
+    joinedGroups: groups,
+    savedUsername: profile?.name ?? localStorage.getItem(USERNAME_KEY),
+    userProfile: profile,
+    systemNotification: null,
+  };
 };
 
-/**
- * Core WebSocket hook — manages connection lifecycle, reconnection, and all event
- * dispatching. Returns the full chat state and action callbacks.
- */
 export function useChat(): UseChatReturn {
-  const [state, setState] = useState<ChatState>(INITIAL_STATE);
+  const [state, setState] = useState<ChatState>(getInitialState);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef(1000);
-  const pendingJoinRef = useRef<{ name: string; room: string; roomType: 'public' | 'private'; password?: string } | null>(null);
+  const pendingJoinRef = useRef<{ name: string; room: string; roomType: 'public' | 'private'; password?: string; isCreating?: boolean } | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const sysNotifTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ─── Send helper ────────────────────────────────────
+  const showSystemNotification = useCallback((text: string) => {
+    if (sysNotifTimerRef.current) clearTimeout(sysNotifTimerRef.current);
+    setState((prev) => ({ ...prev, systemNotification: text }));
+    sysNotifTimerRef.current = setTimeout(() => {
+      setState((prev) => ({ ...prev, systemNotification: null }));
+    }, 3000);
+  }, []);
+
   const send = useCallback((data: object): boolean => {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -62,47 +121,38 @@ export function useChat(): UseChatReturn {
     return false;
   }, []);
 
-  // ─── Handle incoming server events ──────────────────
   const handleEvent = useCallback((event: ServerEvent) => {
     switch (event.type) {
       case 'connected':
         setState((prev) => ({ ...prev, myId: event.id, connected: true }));
-        // Re-join if we were previously in a room (reconnect case)
-        if (pendingJoinRef.current) {
-          send({ type: 'join', ...pendingJoinRef.current });
-        }
+        if (pendingJoinRef.current) send({ type: 'join', ...pendingJoinRef.current });
         break;
-
       case 'join_confirmed':
-        setState((prev) => ({
-          ...prev,
-          myName: event.name,
-          myRoom: event.room,
-          users: event.users,
-          isJoined: true,
-          joinError: null,
-        }));
+        setState((prev) => {
+          const group: JoinedGroup = {
+            room: event.room,
+            roomType: pendingJoinRef.current?.roomType ?? 'public',
+            password: pendingJoinRef.current?.password,
+            lastJoined: Date.now(),
+            isAdmin: pendingJoinRef.current?.isCreating ?? false,
+          };
+          const newGroups = upsertGroup(prev.joinedGroups, group);
+          saveJoinedGroups(newGroups);
+          const name = event.name;
+          localStorage.setItem(USERNAME_KEY, name);
+          return { ...prev, myName: name, myRoom: event.room, users: event.users, isJoined: true, joinError: null, screen: 'chat', joinedGroups: newGroups, savedUsername: name, isAdmin: group.isAdmin };
+        });
         break;
-
       case 'join_error':
         setState((prev) => ({ ...prev, joinError: event.error, isJoined: false }));
         break;
-
       case 'history':
         setState((prev) => {
           const reactions: Record<string, ReactionMap> = {};
-          event.messages.forEach((m) => {
-            if (m.reactions) reactions[m.id] = m.reactions as unknown as ReactionMap;
-          });
-          return {
-            ...prev,
-            messages: event.messages,
-            reactions,
-            users: event.users,
-          };
+          event.messages.forEach((m) => { if (m.reactions) reactions[m.id] = m.reactions as unknown as ReactionMap; });
+          return { ...prev, messages: event.messages, reactions, users: event.users };
         });
         break;
-
       case 'message':
         setState((prev) => {
           const reactions = { ...prev.reactions };
@@ -110,107 +160,54 @@ export function useChat(): UseChatReturn {
           return { ...prev, messages: [...prev.messages, event] };
         });
         break;
-
       case 'reaction':
         setState((prev) => {
           const reactions = { ...prev.reactions };
           if (!reactions[event.messageId]) reactions[event.messageId] = {};
           const emojiUsers = [...(reactions[event.messageId][event.emoji] ?? [])];
           const idx = emojiUsers.indexOf(event.userId);
-
           if (event.action === 'add' && idx === -1) emojiUsers.push(event.userId);
           if (event.action === 'remove' && idx !== -1) emojiUsers.splice(idx, 1);
-
-          if (emojiUsers.length === 0) {
-            delete reactions[event.messageId][event.emoji];
-          } else {
-            reactions[event.messageId] = { ...reactions[event.messageId], [event.emoji]: emojiUsers };
-          }
+          if (emojiUsers.length === 0) delete reactions[event.messageId][event.emoji];
+          else reactions[event.messageId] = { ...reactions[event.messageId], [event.emoji]: emojiUsers };
           return { ...prev, reactions };
         });
         break;
-
       case 'user_joined':
-        setState((prev) => {
-          // Don't show system message for yourself
-          if (event.id === prev.myId) return { ...prev, users: event.users };
-
-          const systemMsg: ChatMessage = {
-            type: 'system',
-            id: `sys-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            text: `${event.name} joined the chat`,
-            timestamp: event.timestamp || Date.now(),
-          };
-          return {
-            ...prev,
-            users: event.users,
-            messages: [...prev.messages, systemMsg],
-          };
-        });
+        setState((prev) => ({ ...prev, users: event.users }));
+        showSystemNotification(`${event.name} joined the room`);
         break;
-
-      case 'user_left':
+      case 'user_left': {
+        const leftName = event.name ?? 'Someone';
         setState((prev) => {
           const typingUsers = { ...prev.typingUsers };
           delete typingUsers[event.id];
-
-          const systemMsg: ChatMessage = {
-            type: 'system',
-            id: `sys-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            text: `${event.name || 'A user'} left the chat`,
-            timestamp: event.timestamp || Date.now(),
-          };
-
-          return {
-            ...prev,
-            users: event.users,
-            typingUsers,
-            messages: [...prev.messages, systemMsg],
-          };
+          return { ...prev, users: event.users, typingUsers };
         });
+        showSystemNotification(`${leftName} left the group`);
         break;
-
+      }
       case 'typing':
         setState((prev) => {
           const typingUsers = { ...prev.typingUsers };
-          if (event.isTyping) {
-            typingUsers[event.id] = event.name;
-          } else {
-            delete typingUsers[event.id];
-          }
+          if (event.isTyping) typingUsers[event.id] = event.name;
+          else delete typingUsers[event.id];
           return { ...prev, typingUsers };
         });
         break;
-
       case 'pong':
         break;
     }
-  }, [send]);
+  }, [send, showSystemNotification]);
 
-  // ─── Connect ─────────────────────────────────────────
   const connect = useCallback(() => {
-    if (wsRef.current) {
-      try { wsRef.current.close(); } catch { /* ignore */ }
-    }
-
+    if (wsRef.current) { try { wsRef.current.close(); } catch { /* ignore */ } }
     const ws = new WebSocket(getWsUrl());
     wsRef.current = ws;
-
-    ws.onopen = () => {
-      reconnectDelayRef.current = 1000;
-      setState((prev) => ({ ...prev, connected: true }));
-    };
-
-    ws.onmessage = (evt) => {
-      try {
-        const event = JSON.parse(evt.data) as ServerEvent;
-        handleEvent(event);
-      } catch { /* ignore malformed */ }
-    };
-
+    ws.onopen = () => { reconnectDelayRef.current = 1000; setState((prev) => ({ ...prev, connected: true })); };
+    ws.onmessage = (evt) => { try { handleEvent(JSON.parse(evt.data) as ServerEvent); } catch { /* ignore */ } };
     ws.onclose = () => {
       setState((prev) => ({ ...prev, connected: false }));
-      // Only reconnect if we were already in a room
       if (pendingJoinRef.current) {
         reconnectTimerRef.current = setTimeout(() => {
           connect();
@@ -218,23 +215,14 @@ export function useChat(): UseChatReturn {
         }, reconnectDelayRef.current);
       }
     };
-
-    ws.onerror = () => {
-      try { ws.close(); } catch { /* ignore */ }
-    };
+    ws.onerror = () => { try { ws.close(); } catch { /* ignore */ } };
   }, [handleEvent]);
 
-  // ─── Heartbeat ───────────────────────────────────────
   useEffect(() => {
-    heartbeatRef.current = setInterval(() => {
-      send({ type: 'ping' });
-    }, 25000);
-    return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    };
+    heartbeatRef.current = setInterval(() => { send({ type: 'ping' }); }, 25000);
+    return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
   }, [send]);
 
-  // ─── Cleanup on unmount ──────────────────────────────
   useEffect(() => {
     return () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
@@ -242,38 +230,55 @@ export function useChat(): UseChatReturn {
     };
   }, []);
 
-  // ─── Public actions ──────────────────────────────────
-  const join = useCallback((
-    name: string,
-    room: string,
-    roomType: 'public' | 'private',
-    password?: string
-  ) => {
-    pendingJoinRef.current = { name, room, roomType, password };
-    connect();
-    // After connection, 'connected' event will trigger the join send via pendingJoinRef
+  const join = useCallback((room: string, roomType: 'public' | 'private', password?: string, isCreating?: boolean) => {
+    setState((prev) => {
+      const name = prev.userProfile?.name ?? prev.savedUsername ?? 'Anonymous';
+      pendingJoinRef.current = { name, room, roomType, password, isCreating: isCreating ?? false };
+      localStorage.setItem(USERNAME_KEY, name);
+      connect();
+      return { ...prev, myName: name, savedUsername: name };
+    });
   }, [connect]);
+
+  const rejoinGroup = useCallback((group: JoinedGroup) => {
+    setState((prev) => {
+      const name = prev.userProfile?.name ?? prev.myName ?? prev.savedUsername ?? 'Anonymous';
+      pendingJoinRef.current = { name, room: group.room, roomType: group.roomType, password: group.password, isCreating: false };
+      connect();
+      return { ...prev, messages: [], reactions: {}, typingUsers: {}, myName: name };
+    });
+  }, [connect]);
+
+  const exitChat = useCallback(() => {
+    // Send silent exit so server doesn't broadcast "user_left"
+    send({ type: 'exit_chat' });
+    // Give the message a moment to send before closing
+    setTimeout(() => {
+      if (wsRef.current) { try { wsRef.current.close(); } catch { /* ignore */ } }
+    }, 100);
+    pendingJoinRef.current = null;
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    setState((prev) => ({ ...prev, screen: 'dashboard', isJoined: false, messages: [], reactions: {}, typingUsers: {}, myRoom: null, connected: false }));
+  }, [send]);
+
+  const leaveGroup = useCallback(() => {
+    send({ type: 'leave_group' });
+    setState((prev) => {
+      const newGroups = removeGroup(prev.joinedGroups, prev.myRoom ?? '');
+      saveJoinedGroups(newGroups);
+      if (wsRef.current) { try { wsRef.current.close(); } catch { /* ignore */ } }
+      pendingJoinRef.current = null;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      return { ...prev, screen: newGroups.length > 0 ? 'dashboard' : 'join', isJoined: false, messages: [], reactions: {}, typingUsers: {}, myRoom: null, connected: false, joinedGroups: newGroups };
+    });
+  }, [send]);
 
   const sendText = useCallback((text: string, replyTo?: ReplyReference) => {
     send({ type: 'message', text, ...(replyTo ? { replyTo } : {}) });
   }, [send]);
 
-  const sendMedia = useCallback((
-    mediaType: 'image' | 'file',
-    dataUrl: string,
-    fileName: string,
-    fileSize: number,
-    replyTo?: ReplyReference
-  ) => {
-    send({
-      type: 'message',
-      text: '',
-      mediaType,
-      mediaData: dataUrl,
-      fileName,
-      fileSize,
-      ...(replyTo ? { replyTo } : {}),
-    });
+  const sendMedia = useCallback((mediaType: 'image' | 'file', dataUrl: string, fileName: string, fileSize: number, replyTo?: ReplyReference) => {
+    send({ type: 'message', text: '', mediaType, mediaData: dataUrl, fileName, fileSize, ...(replyTo ? { replyTo } : {}) });
   }, [send]);
 
   const sendReaction = useCallback((messageId: string, emoji: string, action: 'add' | 'remove') => {
@@ -284,18 +289,20 @@ export function useChat(): UseChatReturn {
     send({ type: 'typing', isTyping });
   }, [send]);
 
-  const clearJoinError = useCallback(() => {
-    setState((prev) => ({ ...prev, joinError: null }));
+  const saveProfile = useCallback((profile: UserProfile) => {
+    saveProfileToStorage(profile);
+    setState((prev) => {
+      const groups = prev.joinedGroups;
+      const screen = groups.length > 0 ? 'dashboard' : 'join';
+      return { ...prev, userProfile: profile, myName: profile.name, savedUsername: profile.name, screen };
+    });
   }, []);
 
-  return {
-    ...state,
-    join,
-    sendText,
-    sendMedia,
-    sendReaction,
-    sendTyping,
-    messageRefs,
-    clearJoinError,
-  };
+  const clearJoinError = useCallback(() => { setState((prev) => ({ ...prev, joinError: null })); }, []);
+
+  const goToJoin = useCallback(() => {
+    setState((prev) => ({ ...prev, screen: 'join', joinError: null }));
+  }, []);
+
+  return { ...state, join, sendText, sendMedia, sendReaction, sendTyping, messageRefs, clearJoinError, leaveGroup, exitChat, rejoinGroup, goToJoin, saveProfile };
 }

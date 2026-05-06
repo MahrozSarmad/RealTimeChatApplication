@@ -12,14 +12,14 @@ import Lightbox from '../Lightbox/Lightbox';
 import { readFileAsDataUrl } from '../../utils/helpers';
 import { useScrollManager } from '../../hooks/useScrollManager';
 import { useTyping } from '../../hooks/useTyping';
-import { useScheduledMessage } from '../../hooks/useScheduledMessage';
-import ScheduledMessage from '../ScheduledMessage/ScheduledMessage';
 import styles from './ChatScreen.module.css';
 
 interface ChatScreenProps {
   myId: string | null;
   myRoom: string;
   isPrivate: boolean;
+  isAdmin: boolean;
+  roomPassword?: string;
   connected: boolean;
   users: UserInfo[];
   messages: ChatMessage[];
@@ -32,6 +32,9 @@ interface ChatScreenProps {
   onReact: (messageId: string, emoji: string, action: 'add' | 'remove') => void;
   onSendTyping: (isTyping: boolean) => void;
   onShowToast: (text: string) => void;
+  onExitChat: () => void;
+  onLeaveGroup: () => void;
+  systemNotification?: string | null;
 }
 
 /**
@@ -41,6 +44,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   myId,
   myRoom,
   isPrivate,
+  isAdmin,
+  roomPassword,
   connected,
   users,
   messages,
@@ -53,16 +58,14 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
   onReact,
   onSendTyping,
   onShowToast,
+  onExitChat,
+  onLeaveGroup,
+  systemNotification,
 }) => {
   const [panelOpen, setPanelOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ReplyReference | null>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [showScheduleModal, setShowScheduleModal] = useState(false);
-  const [pendingText, setPendingText] = useState('');
-  
   const msgRefMap = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const { scheduledMessages, scheduleMessage, cancelScheduled } = useScheduledMessage(onSendText);
 
   const { containerRef, unreadCount, scrollToBottom, handleScroll, atBottom } =
     useScrollManager(messages.length);
@@ -121,13 +124,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       <ChatHeader
         room={myRoom}
         isPrivate={isPrivate}
+        isAdmin={isAdmin}
+        roomPassword={roomPassword}
         connected={connected}
         users={users}
         lightMode={lightMode}
         onToggleTheme={onToggleTheme}
         onOpenUsers={() => setPanelOpen(true)}
         unreadCount={unreadCount}
+        onExitChat={onExitChat}
+        onLeaveGroup={onLeaveGroup}
       />
+
+      {/* System notification (transient pill) */}
+      {systemNotification && (
+        <div className={styles.sysNotif} role="status" aria-live="polite">
+          {systemNotification}
+        </div>
+      )}
 
       {/* Messages area */}
       <div className={styles.messagesOuter}>
@@ -192,30 +206,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
           onStopTyping={stopTyping}
           onCancelReply={() => setReplyingTo(null)}
           onShowToast={onShowToast}
-          onOpenSchedule={(text) => {
-            setPendingText(text);
-            setShowScheduleModal(true);
-          }}
         />
-        
-        {scheduledMessages.length > 0 && (
-          <div style={{ 
-            padding: '4px 20px', 
-            fontSize: '11px', 
-            color: 'var(--accent)', 
-            background: 'var(--surface2)',
-            display: 'flex',
-            gap: '10px',
-            overflowX: 'auto'
-          }}>
-            {scheduledMessages.map(m => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-                🕒 Sending in {Math.round((m.time - Date.now()) / 1000)}s...
-                <button onClick={() => cancelScheduled(m.id)} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer' }}>×</button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Side panel */}
@@ -229,17 +220,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({
       {/* Global overlays */}
       <DropOverlay enabled={true} onDropFiles={handleDropFiles} />
       <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
-      
-      {showScheduleModal && (
-        <ScheduledMessage 
-          currentText={pendingText}
-          onClose={() => setShowScheduleModal(false)}
-          onSchedule={(text, delay) => {
-            scheduleMessage(text, delay);
-            onShowToast(`Message scheduled for ${delay/1000}s from now`);
-          }}
-        />
-      )}
     </div>
   );
 };

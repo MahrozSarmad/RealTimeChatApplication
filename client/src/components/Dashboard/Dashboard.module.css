@@ -1,0 +1,400 @@
+.screen {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124, 106, 247, 0.1) 0%, transparent 70%),
+    var(--bg);
+  overflow: hidden;
+}
+
+/* ─── Top bar ─────────────────────────────────────── */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.topLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #fff 0%, var(--accent2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+
+:global(.light-mode) .logo {
+  background: linear-gradient(135deg, #14142a 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.greeting {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.userName {
+  color: var(--accent2);
+  font-weight: 700;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.iconBtn:hover { background: var(--surface3); }
+
+.newGroupBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 2px 12px rgba(124, 106, 247, 0.3);
+}
+
+.newGroupBtn:hover { background: var(--accent2); }
+.newGroupBtn:active { transform: scale(0.97); }
+
+/* ─── Content ─────────────────────────────────────── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.content::-webkit-scrollbar { width: 4px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ─── Search ──────────────────────────────────────── */
+.searchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  font-size: 14px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.searchInput {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 18px 12px 40px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.searchInput::placeholder { color: var(--text-muted); }
+.searchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* ─── Groups section ──────────────────────────────── */
+.groupsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionLabel {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+
+/* ─── Group list ──────────────────────────────────── */
+.groupList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  width: 100%;
+  animation: fadeUp 0.3s ease both;
+}
+
+.groupCard:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  transform: translateX(2px);
+}
+
+.groupCard:active { transform: scale(0.99); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.groupAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.groupInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.groupName {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.groupMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typeBadge {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.typeBadge.public {
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.typeBadge.private {
+  background: rgba(248, 113, 113, 0.12);
+  color: var(--red);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.lastSeen {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.groupArrow {
+  color: var(--text-muted);
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.groupCard:hover .groupArrow {
+  transform: translateX(4px);
+  color: var(--accent2);
+}
+
+/* ─── Empty ───────────────────────────────────────── */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.emptyIcon {
+  font-size: 32px;
+  opacity: 0.4;
+}
+
+/* ─── Join prompt ─────────────────────────────────── */
+.joinPrompt {
+  text-align: center;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.joinPrompt p {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.joinLink {
+  background: none;
+  border: none;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent2);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.joinLink:hover { color: var(--accent); }
+
+@media (max-width: 500px) {
+  .topBar { padding: 14px 16px; }
+  .content { padding: 16px 16px 32px; }
+}
+
+/* ─── Profile card ──────────────────────────────── */
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 4px;
+}
+
+.profileAvatar {
+  font-size: 40px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profileName {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.profileBio {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+
+.profileMeta {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ─── Admin badge ───────────────────────────────── */
+.adminBadge {
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  letter-spacing: 0.05em;
+}
