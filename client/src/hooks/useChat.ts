@@ -101,6 +101,7 @@ export function useChat(): UseChatReturn {
   const reconnectDelayRef = useRef(1000);
   const pendingJoinRef = useRef<{ name: string; room: string; roomType: 'public' | 'private'; password?: string; isCreating?: boolean } | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pongTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const sysNotifTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -124,7 +125,11 @@ export function useChat(): UseChatReturn {
   const handleEvent = useCallback((event: ServerEvent) => {
     switch (event.type) {
       case 'connected':
-        setState((prev) => ({ ...prev, myId: event.id, connected: true }));
+        setState((prev) => ({
+          ...prev,
+          myId: event.id,
+          connected: true,
+        }));
         if (pendingJoinRef.current) send({ type: 'join', ...pendingJoinRef.current });
         break;
       case 'join_confirmed':
@@ -196,36 +201,95 @@ export function useChat(): UseChatReturn {
         });
         break;
       case 'pong':
+        // Clear pong timeout since we received a response
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current);
+          pongTimeoutRef.current = null;
+        }
         break;
     }
   }, [send, showSystemNotification]);
 
   const connect = useCallback(() => {
     if (wsRef.current) { try { wsRef.current.close(); } catch { /* ignore */ } }
+    
+    // Clear any pending pong timeout
+    if (pongTimeoutRef.current) {
+      clearTimeout(pongTimeoutRef.current);
+      pongTimeoutRef.current = null;
+    }
+    
     const ws = new WebSocket(getWsUrl());
     wsRef.current = ws;
-    ws.onopen = () => { reconnectDelayRef.current = 1000; setState((prev) => ({ ...prev, connected: true })); };
-    ws.onmessage = (evt) => { try { handleEvent(JSON.parse(evt.data) as ServerEvent); } catch { /* ignore */ } };
+    
+    ws.onopen = () => {
+      console.log('[WS] Connected');
+      reconnectDelayRef.current = 1000;
+      setState((prev) => ({ ...prev, connected: true }));
+    };
+    
+    ws.onmessage = (evt) => {
+      try {
+        handleEvent(JSON.parse(evt.data) as ServerEvent);
+      } catch (e) {
+        console.error('[WS] Failed to parse message:', e);
+      }
+    };
+    
     ws.onclose = () => {
+      console.log('[WS] Disconnected');
       setState((prev) => ({ ...prev, connected: false }));
+      
+      // Clear pong timeout on close
+      if (pongTimeoutRef.current) {
+        clearTimeout(pongTimeoutRef.current);
+        pongTimeoutRef.current = null;
+      }
+      
       if (pendingJoinRef.current) {
         reconnectTimerRef.current = setTimeout(() => {
+          console.log('[WS] Attempting reconnect, delay:', reconnectDelayRef.current);
           connect();
           reconnectDelayRef.current = Math.min(reconnectDelayRef.current * 1.5, 15000);
         }, reconnectDelayRef.current);
       }
     };
-    ws.onerror = () => { try { ws.close(); } catch { /* ignore */ } };
+    
+    ws.onerror = (evt) => {
+      console.error('[WS] Error:', evt);
+      try { ws.close(); } catch { /* ignore */ }
+    };
   }, [handleEvent]);
 
   useEffect(() => {
-    heartbeatRef.current = setInterval(() => { send({ type: 'ping' }); }, 25000);
-    return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
-  }, [send]);
+    heartbeatRef.current = setInterval(() => {
+      // Clear any existing pong timeout before sending new ping
+      if (pongTimeoutRef.current) clearTimeout(pongTimeoutRef.current);
+      
+      // Send ping - if connection not open, skip
+      if (!send({ type: 'ping' })) return;
+      
+      // Set timeout for pong response (5 seconds)
+      // If pong doesn't arrive, force reconnection
+      pongTimeoutRef.current = setTimeout(() => {
+        console.warn('[Heartbeat] Pong timeout - connection may be dead, forcing reconnect');
+        if (wsRef.current) {
+          try { wsRef.current.close(); } catch { /* ignore */ }
+        }
+      }, 5000);
+    }, 25000);
+    
+    return () => {
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      if (pongTimeoutRef.current) clearTimeout(pongTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      if (pongTimeoutRef.current) clearTimeout(pongTimeoutRef.current);
       if (wsRef.current) wsRef.current.close();
     };
   }, []);

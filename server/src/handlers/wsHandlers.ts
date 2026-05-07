@@ -88,12 +88,19 @@ export async function handleJoin(ws: WebSocket, payload: JoinPayload): Promise<v
   }
 
   // Attach reactions and mark sender's own messages
+  // CRITICAL: Ensure 'own' property is set for all messages to prevent shift-to-left bug
   const clientId = getClientState(ws)?.id;
-  const enrichedHistory = history.map((m) => ({
-    ...m,
-    reactions: roomObj.reactions[m.id] ?? {},
-    ...(m.senderId === clientId ? { own: true } : {}),
-  }));
+  const enrichedHistory = history.map((m) => {
+    const messageWithReactions: ChatMessage & { own?: boolean } = {
+      ...m,
+      reactions: roomObj.reactions[m.id] ?? {},
+    };
+    // Mark message as own if senderId matches current client
+    if (m.senderId === clientId) {
+      messageWithReactions.own = true;
+    }
+    return messageWithReactions;
+  });
 
   sendToClient(ws, {
     type: 'history',
